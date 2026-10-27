@@ -1,0 +1,7 @@
+class,precision,recall,f1
+BearingDegradation,1,1,1
+Cavitation,1,1,1
+EfficiencyDegradation,0.777777777777778,0.875,0.823529411764706
+Healthy,0.666666666666667,0.5,0.571428571428572
+Misalignment,1,1,1
+Unbalance,1,1,1

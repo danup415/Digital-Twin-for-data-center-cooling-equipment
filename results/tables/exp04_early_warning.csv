@@ -1,0 +1,9 @@
+equipment,fault_type,T_detection_hr,T_critical_hr,lead_time_hr
+Pump,Cavitation,55.5555555555556,469.69696969697,414.141414141414
+Pump,Unbalance,90.9090909090909,NaN,NaN
+Pump,BearingDegradation,90.9090909090909,NaN,NaN
+Pump,Misalignment,90.9090909090909,NaN,NaN
+Fan,BearingDegradation,90.9090909090909,NaN,NaN
+Fan,Unbalance,90.9090909090909,NaN,NaN
+Fan,Misalignment,90.9090909090909,NaN,NaN
+Fan,EfficiencyDegradation,50.5050505050505,439.393939393939,388.888888888889

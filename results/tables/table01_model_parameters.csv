@@ -1,0 +1,13 @@
+parameter,value
+Pump.N_nominal_rpm,1500
+Pump.eta_nominal,0.72
+Fan.N_nominal_rpm,1450
+Fan.eta_nominal,0.65
+Motor.line_freq_Hz,50
+Motor.pole_pairs,2
+Bearing.num_elements,8
+Bearing.ball_diameter_mm,8
+Bearing.pitch_diameter_mm,40
+Thermal.IT_load_kW_nominal,40
+Thermal.T_safe_C,32
+Health.D_critical,0.6

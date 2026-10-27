@@ -1,0 +1,6 @@
+test_name,passed,detail
+Test1_Pump_Healthy_D0,1,"Test1_Pump_Healthy: OK (final HI=100.0, T=26.80C, margin=5.20C, decision=NORMAL, AI predicted=Healthy)"
+Test2_Fan_Healthy_D0,1,"Test2_Fan_Healthy: OK (final HI=100.0, T=26.80C, margin=5.20C, decision=NORMAL, AI predicted=EfficiencyDegradation)"
+Test3_Fan_BearingDegradation_Mild,1,"Test3_Fan_Bearing_Mild: OK (final HI=86.7, T=26.82C, margin=5.18C, decision=WARNING, AI predicted=BearingDegradation)"
+Test4_Fan_BearingDegradation_Moderate,1,"Test4_Fan_Bearing_Moderate: OK (final HI=66.7, T=26.86C, margin=5.14C, decision=WARNING, AI predicted=BearingDegradation)"
+Test5_Fan_EfficiencyDegradation_Severe,1,"Test5_Fan_Efficiency_Severe: OK (final HI=25.0, T=27.80C, margin=4.20C, decision=MAINTENANCE_REQUIRED, AI predicted=EfficiencyDegradation)"

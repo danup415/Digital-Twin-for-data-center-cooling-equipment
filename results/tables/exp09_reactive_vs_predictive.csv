@@ -1,0 +1,4 @@
+mode,peak_server_inlet_C,threshold_violated,intervention_time_hr
+No intervention,34.8705877554695,1,NaN
+Reactive,32.0347826063471,1,439.393939393939
+Predictive,27.0048780487805,0,50.5050505050505

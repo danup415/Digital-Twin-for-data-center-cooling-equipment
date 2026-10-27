@@ -1,0 +1,273 @@
+{
+  "name": "CoolingTwin",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "Commands",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "Equipment",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "Target equipment: Pump or Fan",
+          "value": "Fan"
+        },
+        {
+          "name": "FaultType",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "Injected fault label, exactly as defined in cfg.faults",
+          "value": "Healthy"
+        },
+        {
+          "name": "Severity",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Injected fault severity D, fraction 0..1",
+          "value": 0.0
+        },
+        {
+          "name": "RPM",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Shaft speed, within cfg.operating.speed_rpm_range",
+          "value": 1450.0,
+          "engUnit": "rpm"
+        },
+        {
+          "name": "LoadFraction",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Load fraction 0.3..1.0 (cfg.operating.load_pct_range / 100)",
+          "value": 0.8
+        },
+        {
+          "name": "AmbientC",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Ambient temperature, within cfg.operating.ambient_C_range",
+          "value": 24.0,
+          "engUnit": "degC"
+        },
+        {
+          "name": "ITLoadKW",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "IT heat load 10..100 kW (adapter design bound)",
+          "value": 40.0,
+          "engUnit": "kW"
+        },
+        {
+          "name": "Run",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Boolean",
+          "tooltip": "True = adapter advances the simulation one tick per tick interval",
+          "value": false
+        },
+        {
+          "name": "ResetSeq",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Int4",
+          "tooltip": "Increment to reset the simulation history (new trajectory)",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "Status",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "Connection",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "CONNECTED while the adapter posts; BACKEND DISCONNECTED after a clean stop",
+          "value": "BACKEND DISCONNECTED"
+        },
+        {
+          "name": "InjectedEquipment",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "Equipment the injected fault was applied to",
+          "value": ""
+        },
+        {
+          "name": "InjectedFault",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "Fault that was INJECTED (ground truth of the simulation)",
+          "value": ""
+        },
+        {
+          "name": "PredictedFault",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "Fault PREDICTED by the trained classifier (independent of InjectedFault)",
+          "value": ""
+        },
+        {
+          "name": "Severity",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Injected severity D actually simulated, fraction 0..1",
+          "value": 0.0
+        },
+        {
+          "name": "VibrationRMS",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Vibration RMS from extract_vibration_features",
+          "value": 0.0,
+          "engUnit": "g"
+        },
+        {
+          "name": "CurrentRMS",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Motor current RMS from extract_mcsa_features",
+          "value": 0.0,
+          "engUnit": "A"
+        },
+        {
+          "name": "HealthIndex",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Health Index 0..100 from compute_health_index",
+          "value": 0.0
+        },
+        {
+          "name": "RULValid",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Boolean",
+          "tooltip": "False when estimate_rul has no degrading trend (RUL then NOT available)",
+          "value": false
+        },
+        {
+          "name": "RULHours",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "RUL in simulated hours; meaningful only when RULValid is true",
+          "value": 0.0,
+          "engUnit": "h"
+        },
+        {
+          "name": "RULHistoryPoints",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Int4",
+          "tooltip": "Number of history points behind the RUL estimate (small = provisional)",
+          "value": 0
+        },
+        {
+          "name": "CoolingEffectiveness",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "cooling_effectiveness_from_degradation output, 0..1",
+          "value": 0.0
+        },
+        {
+          "name": "ServerTemperatureC",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Server inlet temperature from thermal_digital_twin",
+          "value": 0.0,
+          "engUnit": "degC"
+        },
+        {
+          "name": "ThermalMarginC",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "T_safe minus server temperature",
+          "value": 0.0,
+          "engUnit": "degC"
+        },
+        {
+          "name": "MaintenanceState",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "maintenance_decision_engine level (5 states)",
+          "value": "NO DATA"
+        },
+        {
+          "name": "MaintenanceReason",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "First reason string from the decision engine",
+          "value": ""
+        },
+        {
+          "name": "SimTimeHours",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "tooltip": "Simulated time in hours (NOT wall-clock time)",
+          "value": 0.0,
+          "engUnit": "h"
+        }
+      ]
+    },
+    {
+      "name": "Meta",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "LastUpdate",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "DateTime",
+          "tooltip": "Gateway time of the last accepted post (any kind)"
+        },
+        {
+          "name": "Heartbeat",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Int4",
+          "tooltip": "Adapter loop counter, increments every poll",
+          "value": 0
+        },
+        {
+          "name": "LastCommandResult",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "tooltip": "OK, or REJECTED/ENGINE ERROR with the reason",
+          "value": "NO COMMAND YET"
+        },
+        {
+          "name": "StaleAfterSeconds",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Int4",
+          "tooltip": "Telemetry older than this is shown as BACKEND DISCONNECTED",
+          "value": 10,
+          "engUnit": "s"
+        }
+      ]
+    }
+  ]
+}

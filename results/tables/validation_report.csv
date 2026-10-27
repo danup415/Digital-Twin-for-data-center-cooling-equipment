@@ -1,0 +1,7 @@
+check_name,passed,detail
+parameter_sanity,1,all parameters within physical ranges
+signal_sanity,1,no NaN/Inf in generated vibration or current signals
+fault_injection_monotonicity,1,efficiency decreases monotonically with cavitation severity D
+data_leakage_audit,1,every scenario_id maps to exactly one split
+reproducibility_check,1,fixed seed (rng(42)) reproduces identical scenario tables
+simulink_compile_check,1,model builds and compiles for a zero-time run

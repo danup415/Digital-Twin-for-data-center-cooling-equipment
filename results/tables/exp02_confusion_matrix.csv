@@ -1,0 +1,7 @@
+Row,BearingDegradation,Cavitation,EfficiencyDegradation,Healthy,Misalignment,Unbalance
+BearingDegradation,16,0,0,0,0,0
+Cavitation,0,8,0,0,0,0
+EfficiencyDegradation,0,0,7,1,0,0
+Healthy,0,0,2,2,0,0
+Misalignment,0,0,0,0,16,0
+Unbalance,0,0,0,0,0,16

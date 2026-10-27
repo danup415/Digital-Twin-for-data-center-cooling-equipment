@@ -1,0 +1,26 @@
+# MATLAB
+*.asv
+*.m~
+slprj/
+_simulink/
+
+# MATLAB generated code and caches
+codegen/
+*.mexw64
+*.mexmaci64
+*.mexa64
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local credentials and machine-specific agent configuration
+.env
+.env.*
+!.env.example
+.agents/
+
+# Nested repository metadata (the parent repository owns version control)
+**/.git/

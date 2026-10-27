@@ -1,0 +1,11 @@
+equipment,fault_type
+Pump,Healthy
+Pump,Cavitation
+Pump,Unbalance
+Pump,BearingDegradation
+Pump,Misalignment
+Fan,Healthy
+Fan,BearingDegradation
+Fan,Unbalance
+Fan,Misalignment
+Fan,EfficiencyDegradation

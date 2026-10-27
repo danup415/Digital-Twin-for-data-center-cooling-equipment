@@ -1,0 +1,3 @@
+model,accuracy,macro_f1
+AI-only (Model D),0.955882352941177,0.899159663865546
+Physics-informed AI (Model E),1,1
