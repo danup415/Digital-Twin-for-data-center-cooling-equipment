@@ -1,0 +1,244 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cooling Infrastructure - Predictive Maintenance Digital Twin</title>
+<style>
+:root{--bg:#0b1220;--pn:#111a2e;--ln:#22314f;--tx:#e2e8f0;--mu:#94a3b8;--ok:#10b981;--wa:#f59e0b;--mt:#f97316;--cr:#ef4444;--cy:#0ea5e9}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.4 "Segoe UI",system-ui,sans-serif}
+#app{display:grid;grid-template-columns:250px 1fr 360px;height:100%}
+aside{background:var(--pn);overflow:auto;padding:10px}#L{border-right:1px solid var(--ln)}#R{border-left:1px solid var(--ln)}
+h2{margin:0 0 4px;font-size:15px}h3{margin:14px 0 6px;font-size:12px;color:var(--mu);font-weight:600}
+button,select{background:#18243e;color:var(--tx);border:1px solid var(--ln);border-radius:4px;padding:5px 8px;font:inherit;cursor:pointer;width:100%}
+button:hover,select:hover{border-color:var(--cy)}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--cy)}button.on{background:var(--cy);color:#04121f;font-weight:600}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:5px}.g1{display:grid;gap:5px}.s2{grid-column:span 2}
+label.c{display:flex;gap:6px;align-items:center;margin:3px 0}
+#C{position:relative;min-width:0;min-height:300px}#cv{width:100%;height:100%;display:block;outline:none}
+#hud{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;pointer-events:none}
+.bd{display:inline-block;padding:2px 8px;border-radius:10px;font-weight:600;font-size:11px;border:1px solid currentColor;background:#0b1220cc}
+#leg{position:absolute;left:10px;bottom:10px;background:#0b1220e6;padding:8px;border:1px solid var(--ln);border-radius:6px;display:none;font-size:11px}
+#leg i{display:block;width:200px;height:10px;margin:4px 0 2px;background:linear-gradient(90deg,#0033ff,#00ccff,#00cc44,#ffd000,#ff2200)}
+#leg div{display:flex;justify-content:space-between;color:var(--mu)}
+table{width:100%;border-collapse:collapse;margin-top:8px}td{padding:5px 3px;border-bottom:1px solid var(--ln);vertical-align:top}td:first-child{color:var(--mu);width:42%}
+.na{color:#64748b;font-style:italic}.demo{color:var(--wa);font-size:10px;margin-left:4px}
+#mod{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}#mod>div{background:var(--pn);border:1px solid var(--ln);padding:16px;border-radius:8px;width:380px;max-width:92vw}
+@media(max-width:900px){#app{grid-template-columns:1fr;grid-template-rows:60vh auto auto;height:auto}#L{order:2}#R{order:3}}
+</style></head><body>
+<div id="app">
+<aside id="L"><h2>Cooling Twin</h2>
+<h3>Camera</h3><div class="g"><button data-v="reset">Reset View</button><button data-v="iso">Isometric View</button><button data-v="top">Top View</button><button data-v="close">Pump/Motor Close-Up</button><button id="fs" class="s2">Full Screen</button></div>
+<h3>View mode</h3><button id="thm">Normal Industrial View</button>
+<h3>Visibility</h3><div id="vis"></div>
+<h3>Fault injection (compatibility enforced)</h3><div class="g1"><select id="fsel" aria-label="Fault"></select><select id="tsel" aria-label="Target asset"></select><div id="fmsg" style="color:var(--mu)"></div></div>
+<h3>AI classifier simulator (Demo only)</h3><select id="clf" aria-label="Classifier output"></select>
+<h3>1-click CAD export</h3><div class="g1"><button id="eg">Full Scene .GLB</button><button id="es">Full Scene .STL</button><button id="eo">Full Scene .OBJ</button><button id="ea">Selected Asset .STL</button></div>
+<h3>Data mode</h3><div class="g"><button id="mdD" class="on">Demo Mode</button><button id="mdS">Strict MATLAB Contract Mode</button></div>
+<label class="c"><input type="checkbox" id="poll" checked> Poll live_telemetry.json (1 s)</label><button id="bf">Bridge files...</button>
+</aside>
+<div id="C"><canvas id="cv" tabindex="0"></canvas><div id="hud"><span id="hm"></span><span id="hs"></span></div>
+<div id="leg"><b>Rack temperature</b><i></i><div><span>18 °C</span><span>27</span><span>36</span><span>45 °C</span></div><div id="lgn" style="display:block;margin-top:3px"></div></div></div>
+<aside id="R"><h2>SCADA monitor</h2><div id="st"></div><table id="tb"></table></aside>
+</div>
+<div id="mod"><div><h2>Bridge files</h2><p style="color:var(--mu)">Run start_server.bat next to digital_twin.html, then let MATLAB write live_telemetry.json beside it. Ignition Perspective can push JSON with postMessage to the inline frame.</p><div class="g1"><button data-f="start_server.bat">Download start_server.bat</button><button data-f="sample_telemetry.json">Download sample_telemetry.json</button><button data-f="README.md">Download README.md</button><button id="mc">Close</button></div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+<script>
+const $=id=>document.getElementById(id),V3=(x,y,z)=>new THREE.Vector3(x,y,z),PI=Math.PI,SY=.75;
+const cv=$('cv'),renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.shadowMap.enabled=true;renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1220);scene.fog=new THREE.Fog(0x0b1220,28,70);
+const cam=new THREE.PerspectiveCamera(45,1,.1,120),ctl=new THREE.OrbitControls(cam,cv);ctl.enableDamping=true;
+scene.add(new THREE.HemisphereLight(0x9bb4d6,0x1a2233,.75));
+const sun=new THREE.DirectionalLight(0xffffff,1);sun.position.set(6,10,6);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10});scene.add(sun);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshStandardMaterial({color:0x151d2e,roughness:.9,metalness:.1}));floor.rotation.x=-PI/2;floor.receiveShadow=true;scene.add(floor);
+const grid=new THREE.GridHelper(40,40,0x2b3d63,0x1c2a46);grid.position.y=.003;scene.add(grid);
+const root=new THREE.Group(),fx=new THREE.Group();scene.add(root,fx);
+/* ---------- helpers ---------- */
+function mk(g,c,m=.6,r=.4,o={}){const x=new THREE.Mesh(g,new THREE.MeshStandardMaterial(Object.assign({color:c,metalness:m,roughness:r},o)));x.castShadow=x.receiveShadow=true;return x}
+function add(p,g,c,m,r,pos,o,rot){const x=mk(g,c,m,r,o);if(pos)x.position.set(...pos);if(rot)x.rotation.set(...rot);p.add(x);return x}
+const cylX=(r,l,s=32)=>new THREE.CylinderGeometry(r,r,l,s).rotateZ(PI/2),cylZ=(r,l,s=32)=>new THREE.CylinderGeometry(r,r,l,s).rotateX(PI/2),cylY=(r,l,s=32)=>new THREE.CylinderGeometry(r,r,l,s),box=(x,y,z)=>new THREE.BoxGeometry(x,y,z);
+function grp(id,x=0,y=0,z=0){const g=new THREE.Group();g.userData.assetId=id;g.name=id;g.position.set(x,y,z);g.userData.p0=g.position.clone();root.add(g);return g}
+function ghost(m){m.userData.noPick=m.userData.noExport=true;return m}
+/* ---------- A. PUMP-01 ---------- */
+const P=grp('PUMP-01'),cast=0x4b5563;
+add(P,cylX(.42,.3,48),cast,.7,.45,[1,SY,0],{transparent:true,opacity:.6});
+add(P,new THREE.TorusGeometry(.42,.09,16,48).rotateY(PI/2),cast,.7,.45,[1,SY,0]);
+add(P,cylX(.17,.4),cast,.7,.5,[.65,SY,0]);add(P,box(.4,.38,.35),cast,.7,.5,[.65,.34,0]);
+add(P,cylX(.14,.35),cast,.7,.5,[1.325,SY,0]);add(P,cylX(.22,.04,40),0x6b7280,.8,.35,[1.5,SY,0]);
+for(let i=0;i<8;i++){const a=i*PI/4;add(P,cylX(.016,.07,8),0x9ca3af,.9,.3,[1.5,SY+Math.cos(a)*.18,Math.sin(a)*.18])}
+add(P,cylY(.11,.3),cast,.7,.5,[1,1.3,0]);add(P,cylY(.18,.04,40),0x6b7280,.8,.35,[1,1.45,0]);
+for(let i=0;i<8;i++){const a=i*PI/4;add(P,cylY(.013,.07,8),0x9ca3af,.9,.3,[1+Math.cos(a)*.145,1.45,Math.sin(a)*.145])}
+const imp=new THREE.Group();imp.position.set(1,SY,0);P.add(imp);
+add(imp,cylX(.07,.2),0xb08d57,.9,.3);add(imp,cylX(.33,.02,40),0xb08d57,.9,.3,[-.08,0,0]);
+for(let i=0;i<6;i++){const b=new THREE.Group();b.rotation.x=i*PI/3;imp.add(b);add(b,box(.14,.27,.02),0xb08d57,.9,.3,[0,.2,0])}
+/* ---------- B. MTR-01 + SKID-01 ---------- */
+const M=grp('MTR-01');
+add(M,box(3.1,.15,.9),0x374151,.8,.5,[.05,.075,0]).name='SKID-01';
+[-.4,.4].forEach(z=>add(M,box(3.1,.07,.08),0x4b5563,.8,.5,[.05,.185,z]));
+add(M,cylX(.3,.9),0x234a7a,.5,.45,[-.85,SY,0]);add(M,box(.7,.26,.6),0x1e3f66,.5,.5,[-.85,.28,0]);
+for(let i=0;i<18;i++){const a=i*2*PI/18,f=add(M,box(.85,.07,.025),0x1e3f66,.5,.5,[-.85,SY+Math.cos(a)*.325,Math.sin(a)*.325]);f.rotation.x=a}
+add(M,cylX(.33,.1),0x1b3558,.6,.4,[-.35,SY,0]);add(M,cylX(.33,.1),0x1b3558,.6,.4,[-1.35,SY,0]);
+add(M,box(.3,.2,.25),0x334155,.5,.5,[-.85,SY+.42,0]);add(M,cylY(.04,.2),0x334155,.5,.5,[-.7,SY+.5,.1]);
+const D=new THREE.Group();D.position.set(0,SY,0);D.rotation.order='ZYX';M.add(D);
+add(D,cylX(.045,.75),0xcbd5e1,.9,.2,[.075,0,0]);
+const hub=add(D,cylX(.09,.12),0x94a3b8,.8,.3,[0,0,0]);add(D,cylX(.09,.12),0x94a3b8,.8,.3,[.25,0,0]);add(D,cylX(.08,.12),0x111827,.1,.8,[.125,0,0]);
+for(let i=0;i<3;i++){const a=i*2*PI/3;add(D,box(.12,.05,.05),0x111827,.1,.8,[.125,Math.cos(a)*.1,Math.sin(a)*.1]).rotation.x=a}
+/* ---------- F. PIPE-LOOP-01 ---------- */
+const PL=grp('PIPE-LOOP-01');
+const sup=[[1,1.45,0],[1,1.7,0],[3,1.7,0],[3,1.7,-2.2],[3.7,1.7,-2.2]],ret=[[3.7,.5,-2.8],[2.4,.5,-2.8],[2.4,.5,0],[2.4,.75,0],[1.5,.75,0]];
+function pipe(pts,col){const r=.075,v=pts.map(p=>V3(...p));for(let i=0;i<v.length;i++){
+ if(i>0){const a=v[i-1],b=v[i],d=b.clone().sub(a),L=d.length(),q=new THREE.Quaternion().setFromUnitVectors(V3(0,1,0),d.clone().normalize());
+  const m=add(PL,cylY(r,L,20),col,.2,.4,null,{transparent:true,opacity:.38,depthWrite:false});m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.copy(q);
+  [a,b].forEach(e=>{const f=add(PL,cylY(r*1.55,.03,24),0x94a3b8,.8,.3);f.position.copy(e);f.quaternion.copy(q)})}
+ if(i>0&&i<v.length-1){const s=add(PL,new THREE.SphereGeometry(r,16,12),col,.2,.4,null,{transparent:true,opacity:.38,depthWrite:false});s.position.copy(v[i])}}}
+pipe(sup,0x1e6fd9);pipe(ret,0x14b8a6);
+function valve(x,y,z){add(PL,box(.14,.2,.14),0x64748b,.7,.4,[x,y,z]);add(PL,cylY(.05,.12),0x64748b,.7,.4,[x,y+.14,z]);add(PL,cylY(.015,.28),0xcbd5e1,.9,.2,[x,y+.3,z]);add(PL,new THREE.TorusGeometry(.09,.016,10,24).rotateX(PI/2),0xdc2626,.3,.5,[x,y+.44,z])}
+valve(2,1.7,0);valve(2.4,.5,-1.4);
+[[3,1.62,-1.1],[2.6,1.62,0],[2.4,.42,-.7],[3,.42,-2.8]].forEach(([x,h,z])=>{add(PL,cylY(.03,h),0x6b7280,.7,.5,[x,h/2,z]);add(PL,box(.2,.02,.2),0x6b7280,.7,.5,[x,.01,z])});
+/* ---------- C. CRAC-01 ---------- */
+const C=grp('CRAC-01',4.5,0,-2.5),cabG=box(1.6,2,1);
+add(C,cabG,0x94a3b8,.5,.5,[0,1,0],{transparent:true,opacity:.2,depthWrite:false});
+const ed=new THREE.LineSegments(new THREE.EdgesGeometry(cabG),new THREE.LineBasicMaterial({color:0x64748b}));ed.position.y=1;ghost(ed);C.add(ed);
+add(C,box(1.62,.12,1.02),0x1f2937,.6,.5,[0,.06,0]);add(C,box(1.2,.3,.8),0x475569,.6,.5,[0,2.15,0]);
+for(let i=0;i<8;i++)add(C,box(1.3,.025,.03),0x1f2937,.6,.5,[0,.18+i*.05,.51],null,[.5,0,0]);
+const cg=new THREE.Group();cg.position.set(0,1,-.05);cg.rotation.x=.55;C.add(cg);
+for(let i=0;i<36;i++)add(cg,box(.008,.9,.55),0x9ca3af,.7,.4,[-.6+i*.034,0,0]);
+[-.3,-.1,.1,.3].forEach(y=>[-.12,.12].forEach(z=>add(cg,cylX(.014,1.25,10),0xb45309,.9,.3,[0,y,z])));
+/* ---------- D. FAN-01 ---------- */
+const F=grp('FAN-01',4.5,1.3,-1.85);
+add(F,new THREE.CylinderGeometry(.4,.4,.3,40,1,true).rotateX(PI/2),0x64748b,.7,.4,null,{transparent:true,opacity:.55,side:THREE.DoubleSide});
+add(F,new THREE.TorusGeometry(.4,.03,10,40),0x64748b,.7,.4,[0,0,.15]);add(F,cylZ(.1,.22),0x334155,.6,.4);
+for(let i=0;i<4;i++){const a=i*PI/2,s=add(F,box(.02,.3,.02),0x64748b,.7,.4,[-Math.sin(a)*.25,Math.cos(a)*.25,-.1]);s.rotation.z=a}
+const R=new THREE.Group();F.add(R);add(R,cylZ(.11,.06),0x475569,.7,.4,[0,0,.12]);
+for(let i=0;i<7;i++){const g=new THREE.Group();g.rotation.z=i*2*PI/7;R.add(g);add(g,box(.13,.28,.012),0x94a3b8,.6,.4,[0,.24,0]).rotation.y=.45}
+/* ---------- E. RACK-01 ---------- */
+const K=grp('RACK-01',4.5,0,.6),leds=[];
+[[-.28,-.48],[.28,-.48],[-.28,.48],[.28,.48]].forEach(([x,z])=>add(K,box(.04,1.95,.04),0x111827,.7,.4,[x,1.025,z]));
+add(K,box(.6,.05,1),0x111827,.7,.4,[0,.05,0]);add(K,box(.6,.05,1),0x111827,.7,.4,[0,2.0,0]);
+[[-.23,-.4],[.23,-.4],[-.23,.4],[.23,.4]].forEach(([x,z])=>add(K,box(.02,1.8,.02),0x9ca3af,.9,.3,[x,1.0,z]));
+for(let i=0;i<12;i++){const y=.2+i*.12;add(K,box(.46,.085,.66),0x1f2937,.6,.4,[0,y,0]);
+ [-.12,.12].forEach(x=>add(K,box(.05,.02,.03),0x9ca3af,.9,.3,[x,y,-.35]));
+ const l=add(K,box(.012,.012,.006),0x10b981,0,.5,[-.19,y+.02,-.335],{emissive:0x10b981,emissiveIntensity:1});l.userData.led=true;leds.push(l)}
+const cn=document.createElement('canvas');cn.width=cn.height=32;const cx=cn.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,32,32);cx.fillStyle='#000';cx.beginPath();cx.arc(16,16,9,0,7);cx.fill();
+const at0=new THREE.CanvasTexture(cn);at0.wrapS=at0.wrapT=THREE.RepeatWrapping;at0.repeat.set(24,60);
+add(K,new THREE.PlaneGeometry(.56,1.85),0x1f2937,.6,.5,[0,1.02,-.5],{alphaMap:at0,transparent:true,opacity:.55,side:THREE.DoubleSide});
+const auraMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uI:{value:20},uD:{value:15}},
+vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+fragmentShader:'varying vec3 p;uniform float uI,uD;vec3 ramp(float t){t=clamp(t,0.,1.)*4.;vec3 a=vec3(0,.2,1.),b=vec3(0,.8,1.),c=vec3(0,.8,.27),d=vec3(1,.82,0),e=vec3(1,.13,0);return t<1.?mix(a,b,t):t<2.?mix(b,c,t-1.):t<3.?mix(c,d,t-2.):mix(d,e,t-3.);}void main(){float z=(p.z+.53)/1.06,y=(p.y+1.)/2.;float T=uI+uD*(.55*z+.35*y*z+.1*y);gl_FragColor=vec4(ramp((T-18.)/27.),.5);}'});
+const aura=ghost(new THREE.Mesh(box(.66,2,1.06),auraMat));aura.position.y=1.02;aura.visible=false;K.add(aura);
+/* ---------- fault visuals (not exported) ---------- */
+const lm=c=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false});
+const lzA=new THREE.Mesh(new THREE.PlaneGeometry(.55,.55).rotateY(PI/2),lm(0x22d3ee)),lzB=new THREE.Mesh(new THREE.PlaneGeometry(.55,.55).rotateY(PI/2),lm(0xef4444));
+lzA.position.set(-.18,SY+.04,0);lzA.rotation.z=.07;lzB.position.set(.45,SY-.04,0);lzB.rotation.z=-.07;lzA.visible=lzB.visible=false;fx.add(lzA,lzB);
+const ringM=ghost(new THREE.Mesh(new THREE.TorusGeometry(.35,.025,12,40).rotateY(PI/2),new THREE.MeshBasicMaterial({color:0xef4444,transparent:true})));ringM.position.set(-.35,SY,0);ringM.visible=false;M.add(ringM);
+const ringF=ghost(new THREE.Mesh(new THREE.TorusGeometry(.12,.015,10,32),new THREE.MeshBasicMaterial({color:0xef4444,transparent:true})));ringF.visible=false;F.add(ringF);
+/* ---------- G. particles ---------- */
+function pts(n,c,s){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(n*3),3));const p=new THREE.Points(g,new THREE.PointsMaterial({color:c,size:s,transparent:true,opacity:.9,depthWrite:false}));p.frustumCulled=false;scene.add(p);return p}
+const pS=pts(90,0x38bdf8,.07),pR=pts(90,0x5eead4,.07),pC=pts(110,0xbae6fd,.05),pW=pts(80,0xfb923c,.06),pB=pts(45,0xe0f2fe,.035);
+function mkPath(a){const v=a.map(p=>V3(...p)),c=[0];for(let i=1;i<v.length;i++)c.push(c[i-1]+v[i].distanceTo(v[i-1]));return{v,c,L:c[c.length-1]}}
+const pathS=mkPath(sup),pathR=mkPath(ret),pathW=mkPath([[4.5,1,1.15],[4.5,2.3,1.15],[4.5,2.3,-2.4]]),_t=V3(0,0,0);
+function at(p,s,o){s=((s%p.L)+p.L)%p.L;let i=1;while(i<p.c.length-1&&p.c[i]<s)i++;return o.lerpVectors(p.v[i-1],p.v[i],(s-p.c[i-1])/(p.c[i]-p.c[i-1]))}
+function flow(pt,path,n,ph,jit){const a=pt.geometry.attributes.position.array;for(let i=0;i<n;i++){at(path,i/n*path.L+ph,_t);a[i*3]=_t.x+Math.sin(i*12.9)*jit;a[i*3+1]=_t.y+Math.cos(i*7.3)*jit;a[i*3+2]=_t.z+Math.sin(i*3.1)*jit}pt.geometry.attributes.position.needsUpdate=true}
+/* ---------- state & model ---------- */
+const FL={healthy:{n:'Healthy',t:[],s:'ok'},cavitation:{n:'Cavitation',t:['PUMP-01'],s:'warn'},bearing:{n:'Bearing Degradation',t:['MTR-01','FAN-01'],s:'crit'},unbalance:{n:'Unbalance',t:['FAN-01','PUMP-01'],s:'warn'},misalignment:{n:'Misalignment',t:['MTR-01'],s:'maint'},efficiency:{n:'Efficiency Degradation',t:['CRAC-01','RACK-01'],s:'maint'}};
+const ST={ok:['#10b981','NORMAL','✔'],warn:['#f59e0b','WARNING','⚠'],maint:['#f97316','MAINTENANCE REQUIRED','🔧'],crit:['#ef4444','CRITICAL FAULT','⛔'],none:['#94a3b8','NO DATA','…']};
+const ASSET={'PUMP-01':['Chilled-Water Centrifugal Pump','Centrifugal pump, DN100 suction / DN80 discharge'],'MTR-01':['TEFC Induction Drive Motor & Coupling','TEFC induction motor, 3-jaw elastomeric coupling'],'CRAC-01':['Computer Room Air Conditioning Unit','CRAC, chilled-water fin-tube coil'],'FAN-01':['CRAC Supply Fan & Motor','Axial supply fan, 7 blades'],'RACK-01':['42U Data-Center Server Cabinet','42U server rack, 12 x 2U servers'],'PIPE-LOOP-01':['Chilled-Water Piping Loop','Insulated DN80 supply/return headers']};
+const DM={healthy:[96,21000,1.4,38.5,27,94,'No action - continue monitoring'],cavitation:[62,900,6.8,41.2,29,90,'Inspect suction strainer / verify NPSH margin'],bearing:[48,320,9.5,40,28,92,'Replace bearing - schedule outage'],unbalance:[70,1200,7.2,39,27.5,93,'Balance rotor at next maintenance window'],misalignment:[58,700,5.9,47,28,91,'Re-align motor/pump coupling'],efficiency:[52,500,2.1,38,41,62,'Clean coil, inspect fan and airflow']};
+const S={fault:'healthy',target:null,mode:'demo',thermal:false,sel:null,payload:null,ch:'',rx:0,ticks:0,parts:true};
+const AFF={cavitation:()=>['PUMP-01'],bearing:()=>[S.target],unbalance:()=>[S.target],misalignment:()=>['MTR-01','PUMP-01'],efficiency:()=>['CRAC-01','RACK-01','FAN-01'],healthy:()=>[]};
+const affected=id=>AFF[S.fault]().includes(id);
+const normF=s=>{if(s==null)return null;s=String(s).toLowerCase();return/cav/.test(s)?'cavitation':/bear/.test(s)?'bearing':/unbal/.test(s)?'unbalance':/misal/.test(s)?'misalignment':/effic/.test(s)?'efficiency':/health|normal|none/.test(s)?'healthy':null};
+let T0=0;
+function connStr(){if(!S.rx)return null;const a=(Date.now()-S.rx)/1000;return a>5?'Stale (last '+S.ch+', '+a.toFixed(0)+' s ago)':'Connected via '+S.ch}
+function metrics(){const id=S.sel;
+ if(S.mode==='demo'){const n=Math.sin(T0*1.7)*.03,row=DM[affected(id)?S.fault:'healthy'],sys=DM[S.fault],tmp=sys[4]+n*3;
+  const cl=$('clf').value,pr=cl==='truth'?FL[S.fault].n:cl==='none'?null:FL[cl].n;
+  return{inj:FL[S.fault].n,pred:pr,hi:row[0],rul:row[1],prov:S.ticks<40,vib:row[2]*(1+n),cur:row[3]*(1+n),temp:tmp,margin:45-tmp,eff:sys[5],dec:row[6],ts:new Date().toISOString(),conn:'Simulated data - no live link'}}
+ const P0=S.payload,d=P0?Object.assign({},P0,(P0.assets||{})[id]||{}):null,r=(...k)=>{if(!d)return null;for(const x of k)if(d[x]!=null)return d[x];return null};
+ return{inj:r('injected_fault','injectedFault'),pred:r('predicted_fault','aiPredictedFault'),hi:r('health_index','healthIndex'),rul:r('rul_hours','rulHours'),prov:r('rul_provisional','rulProvisional'),vib:r('vibration_rms_mm_s'),cur:r('motor_current_rms_A'),temp:r('server_temp_C'),margin:r('thermal_margin_C'),eff:r('cooling_effectiveness_pct'),dec:r('maintenance_decision','maintenanceDecision'),ts:r('timestamp'),conn:connStr()}}
+let curT=null;
+function refresh(){const dm=S.mode==='demo',m=metrics(),id=S.sel,A=ASSET[id];curT=m.temp==null?null:+m.temp;
+ const NA=()=>'<span class="na">'+(S.payload?'Unavailable':'Not connected')+'</span>',DT=dm?'<span class="demo">[Demo]</span>':'';
+ const num=(v,d,u)=>v==null?NA():(+v).toFixed(d)+u+DT,str=v=>v==null?NA():String(v)+DT;
+ let pred=m.pred==null?(dm?'No classifier output'+DT:NA()):m.pred+DT;
+ if(m.pred!=null&&m.inj!=null){const ok=normF(m.pred)===normF(m.inj);pred+=ok?' <span class="bd" style="color:var(--ok)">✔ Match</span>':' <span class="bd" style="color:var(--cr)">⚠ MISMATCH</span>'}
+ const rows=[['Selected equipment',id?id+' - '+A[0]:'None selected (click equipment)'],['Equipment type',id?A[1]:'-'],['Injected fault (ground truth)',str(m.inj)],['AI-predicted fault',pred],['Health index (0-100)',num(m.hi,0,'')],
+ ['Remaining useful life',m.rul==null?NA():(+m.rul).toFixed(0)+' h'+DT+(m.prov?' <span class="bd" style="color:var(--wa)">[Provisional]</span>':'')],['Vibration RMS',num(m.vib,2,' mm/s')],['Motor-current RMS',num(m.cur,1,' A')],['Server temperature',num(m.temp,1,' °C')],['Thermal margin',num(m.margin,1,' °C')],['Cooling effectiveness',num(m.eff,0,' %')],['Maintenance decision',str(m.dec)],['Last update',str(m.ts)],['Data connection',m.conn==null?NA():m.conn+(dm?'<span class="demo">[Demo]</span>':'')]];
+ $('tb').innerHTML=rows.map((r,i)=>'<tr><td>'+(i+1)+'. '+r[0]+'</td><td>'+r[1]+'</td></tr>').join('');
+ let sk=dm?(id&&!affected(id)&&S.fault!=='healthy'?'ok':FL[S.fault].s):(normF(m.inj)?FL[normF(m.inj)].s:'none');const s=ST[sk];
+ $('st').innerHTML='<span class="bd" style="color:'+s[0]+'">'+s[2]+' '+s[1]+'</span>';$('hs').innerHTML='<span class="bd" style="color:'+s[0]+'">'+s[2]+' '+s[1]+'</span>';
+ $('hm').innerHTML=dm?'<span class="bd" style="color:var(--wa)">[Demo] simulated data</span>':'<span class="bd" style="color:var(--cy)">Strict MATLAB contract</span>';
+ const ok=curT!=null;aura.visible=S.thermal&&ok;if(ok){auraMat.uniforms.uI.value=curT-7;auraMat.uniforms.uD.value=15}
+ $('lgn').textContent=ok?'Heat-map scaled from server temperature '+curT.toFixed(1)+' °C':'Server temperature not connected - heat-map hidden';
+ const lc=!ok?0x10b981:curT>=40?0xef4444:curT>=33?0xf59e0b:0x10b981;leds.forEach(l=>{l.material.color.setHex(lc);l.material.emissive.setHex(lc)})}
+/* ---------- fault control ---------- */
+const fsel=$('fsel'),tsel=$('tsel'),clf=$('clf');
+Object.keys(FL).forEach(k=>{fsel.add(new Option(FL[k].n,k));clf.add(new Option('Classifier: '+FL[k].n,k))});
+clf.insertBefore(new Option('Classifier: follow ground truth','truth'),clf.firstChild);clf.insertBefore(new Option('Classifier: no output','none'),clf.children[1]);clf.value='truth';
+function fillT(){tsel.innerHTML='';const t=FL[S.fault].t;t.forEach(x=>tsel.add(new Option('Target: '+x,x)));tsel.disabled=!t.length;if(!t.length)tsel.add(new Option('Target: none','')); if(S.target)tsel.value=S.target;
+ $('fmsg').textContent=S.fault==='healthy'?'No fault injected.':S.fault==='misalignment'?'Couples MTR-01 <-> PUMP-01. Allowed target: MTR-01.':'Compatible: '+t.join(' / ')}
+function setFault(f,t){if(!FL[f])return;const c=FL[f].t;if(c.length&&!c.includes(t))t=c.includes(S.sel)?S.sel:c[0];S.fault=f;S.target=c.length?t:null;fsel.value=f;fillT();refresh()}
+fsel.onchange=()=>setFault(fsel.value,FL[fsel.value].t.includes(S.sel)?S.sel:null);
+tsel.onchange=()=>setFault(S.fault,tsel.value);clf.onchange=refresh;
+/* ---------- selection ---------- */
+const aid=o=>{while(o&&!o.userData.assetId)o=o.parent;return o&&o.userData.assetId};
+const grpOf=id=>root.children.find(g=>g.userData.assetId===id);
+function hl(g,on){g.traverse(o=>{if(o.isMesh&&o.material.emissive&&!o.userData.led){if(o.userData.be===undefined)o.userData.be=o.material.emissive.getHex();o.material.emissive.setHex(on?0x075985:o.userData.be)}})}
+function select(id){if(S.sel)hl(grpOf(S.sel),false);S.sel=id;if(id)hl(grpOf(id),true);refresh()}
+const rc=new THREE.Raycaster(),mv=new THREE.Vector2();let dn=[0,0];
+cv.addEventListener('pointerdown',e=>dn=[e.clientX,e.clientY]);
+cv.addEventListener('pointerup',e=>{if(Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>5)return;const r=cv.getBoundingClientRect();mv.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);rc.setFromCamera(mv,cam);
+ const h=rc.intersectObjects(root.children.filter(g=>g.visible),true).find(h=>h.object.isMesh&&!h.object.userData.noPick);select(h?aid(h.object):null)});
+/* ---------- UI wiring ---------- */
+const PRE={reset:[[7,5,8],[2.5,1,-.5]],iso:[[10,8,9],[2.5,.8,-.5]],top:[[2.5,15,.01],[2.5,0,-.5]],close:[[2.6,1.7,3.2],[.5,.75,0]]};let goal=null;
+cam.position.set(...PRE.reset[0]);ctl.target.set(...PRE.reset[1]);
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{const p=PRE[b.dataset.v];goal={p:V3(...p[0]),t:V3(...p[1])}});
+$('fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();
+$('thm').onclick=()=>{S.thermal=!S.thermal;$('thm').textContent=S.thermal?'Thermal Visualization Mode':'Normal Industrial View';$('thm').classList.toggle('on',S.thermal);$('leg').style.display=S.thermal?'block':'none';refresh()};
+[['PUMP-01',P],['MTR-01',M],['CRAC-01',C],['FAN-01',F],['RACK-01',K],['PIPE-LOOP-01',PL],['Flow Particles',null]].forEach(([n,g])=>{const l=document.createElement('label');l.className='c';l.innerHTML='<input type="checkbox" checked> '+n;l.firstChild.onchange=e=>{if(g)g.visible=e.target.checked;else S.parts=e.target.checked};$('vis').appendChild(l)});
+function setMode(m){S.mode=m;$('mdD').classList.toggle('on',m==='demo');$('mdS').classList.toggle('on',m==='strict');clf.disabled=m!=='demo';refresh()}
+$('mdD').onclick=()=>setMode('demo');$('mdS').onclick=()=>setMode('strict');
+/* ---------- CAD export ---------- */
+function dl(b,n){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4e3)}
+function bake(g){const o=new THREE.Group();o.name=g.userData.assetId;g.updateWorldMatrix(true,true);g.traverse(m=>{if(!m.isMesh||m.userData.noExport)return;for(let p=m;p;p=p.parent)if(!p.visible)return;const x=new THREE.Mesh(m.geometry.clone().applyMatrix4(m.matrixWorld),m.material);x.name=m.name||g.userData.assetId;o.add(x)});return o}
+function bakeAll(){scene.updateMatrixWorld(true);const o=new THREE.Group();root.children.forEach(g=>{if(g.visible)o.add(bake(g))});return o}
+$('eg').onclick=()=>new THREE.GLTFExporter().parse(bakeAll(),r=>dl(new Blob([r],{type:'model/gltf-binary'}),'cooling_twin.glb'),{binary:true});
+$('es').onclick=()=>dl(new Blob([new THREE.STLExporter().parse(bakeAll(),{binary:true})],{type:'model/stl'}),'cooling_twin.stl');
+$('eo').onclick=()=>dl(new Blob([new THREE.OBJExporter().parse(bakeAll())],{type:'text/plain'}),'cooling_twin.obj');
+$('ea').onclick=()=>{if(!S.sel)return alert('Select an asset in the 3D view first.');scene.updateMatrixWorld(true);dl(new Blob([new THREE.STLExporter().parse(bake(grpOf(S.sel)),{binary:true})],{type:'model/stl'}),S.sel+'.stl')};
+/* ---------- telemetry bridge ---------- */
+function ingest(o,ch){try{if(typeof o==='string')o=JSON.parse(o);if(o&&o.payload&&typeof o.payload==='object')o=o.payload;if(!o||typeof o!=='object')return}catch(e){return}
+ S.payload=o;S.ch=ch;S.rx=Date.now();const f=normF(o.injected_fault||o.injectedFault);if(f&&S.mode==='strict')setFault(f,o.target_asset||o.assetId||S.sel);else refresh()}
+window.updateTelemetry=j=>ingest(j,'updateTelemetry()');
+window.addEventListener('message',e=>ingest(e.data,'postMessage'));
+setInterval(async()=>{if(!$('poll').checked||location.protocol==='file:')return;try{const r=await fetch('live_telemetry.json?_='+Date.now(),{cache:'no-store'});if(r.ok)ingest(await r.json(),'HTTP poll')}catch(e){}},1000);
+const FILES=()=>({'start_server.bat':'@echo off\r\ncd /d "%~dp0"\r\nstart "" http://localhost:8000/digital_twin.html\r\npython -m http.server 8000\r\n',
+'sample_telemetry.json':JSON.stringify({timestamp:new Date().toISOString(),assetId:'PUMP-01',injected_fault:'Cavitation',predicted_fault:'Cavitation',health_index:62,rul_hours:900,rul_provisional:true,vibration_rms_mm_s:6.8,motor_current_rms_A:41.2,server_temp_C:29,thermal_margin_C:16,cooling_effectiveness_pct:90,maintenance_decision:'Inspect suction strainer'},null,2),
+'README.md':'# Cooling Digital Twin bridge\n\n1. Put digital_twin.html and start_server.bat in one folder; run start_server.bat (needs Python).\n2. MATLAB: write live_telemetry.json (see sample_telemetry.json) into the same folder, e.g. fid=fopen("live_telemetry.json","w");fprintf(fid,"%s",jsonencode(s));fclose(fid);\n3. The page polls the file every 1000 ms. Switch to Strict MATLAB Contract Mode: missing fields show "Not connected" / "Unavailable".\n4. Ignition 8.3 Perspective: host the page over HTTP, point an Inline Frame (ia.display.iframe) source at it, and send JSON with iframe.contentWindow.postMessage(json,"*") or call window.updateTelemetry(json).\n\nContract keys: timestamp, assetId, injected_fault, predicted_fault, health_index, rul_hours, rul_provisional, vibration_rms_mm_s, motor_current_rms_A, server_temp_C, thermal_margin_C, cooling_effectiveness_pct, maintenance_decision. Per-asset values may be nested under "assets":{"PUMP-01":{...}}. No classifier confidence is ever displayed.\n'});
+$('bf').onclick=()=>$('mod').style.display='flex';$('mc').onclick=()=>$('mod').style.display='none';
+document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const n=b.dataset.f;dl(new Blob([FILES()[n]],{type:'text/plain'}),n)});
+/* ---------- animation ---------- */
+const clock=new THREE.Clock();let ph=0,ang=0,fang=0,pulse=0;
+function resize(){const w=$('C').clientWidth,h=$('C').clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+new ResizeObserver(resize).observe($('C'));resize();
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);T0+=dt;pulse=.5+.5*Math.sin(T0*6);
+ const f=S.fault,tg=S.target,fl=f==='efficiency'?.55:1;ph+=dt*fl;ang+=dt*8*fl;fang+=dt*12*fl;
+ [P,M,F].forEach(g=>g.position.copy(g.userData.p0));
+ const jit=(g,a)=>g.position.add(V3((Math.random()-.5)*a,(Math.random()-.5)*a,(Math.random()-.5)*a));
+ if(f==='cavitation')jit(P,.012);if(f==='bearing')jit(tg==='MTR-01'?M:F,.009);
+ D.rotation.x=ang;D.rotation.z=f==='misalignment'?.03:0;imp.rotation.x=ang;R.rotation.z=-fang;
+ const ua=f==='unbalance'&&tg==='PUMP-01'?.025:0,fa=f==='unbalance'&&tg==='FAN-01'?.02:0;
+ imp.position.set(1,SY+Math.cos(ang)*ua,Math.sin(ang)*ua);R.position.set(Math.cos(fang)*fa,Math.sin(fang)*fa,0);
+ lzA.visible=lzB.visible=f==='misalignment';lzA.material.opacity=lzB.material.opacity=.25+.2*pulse;
+ hub.material.emissive.setHex(f==='misalignment'?0xf97316:(S.sel==='MTR-01'?0x075985:0));hub.material.emissiveIntensity=f==='misalignment'?.4+pulse:1;
+ const bm=f==='bearing'&&tg==='MTR-01',bf=f==='bearing'&&tg==='FAN-01';ringM.visible=bm;ringF.visible=bf;
+ [ringM,ringF].forEach(r=>{r.material.opacity=.4+.6*pulse;r.scale.setScalar(1+.12*pulse)});
+ const vis=S.parts;pS.visible=pR.visible=pC.visible=vis&&C.visible;pS.visible=pR.visible=vis&&PL.visible;pC.visible=vis&&F.visible;pW.visible=vis&&S.thermal;pB.visible=vis&&f==='cavitation';
+ flow(pS,pathS,90,ph*.9,.012);flow(pR,pathR,90,ph*.9,.012);flow(pW,pathW,80,ph*1.1,.14);
+ let a=pC.geometry.attributes.position.array;for(let i=0;i<110;i++){const z=(i/110*1.8+ph*1.2)%1.8,s=.38*(.4+z*.3);a[i*3]=4.5+Math.sin(i*12.9)*s;a[i*3+1]=1.3+Math.cos(i*7.3)*s;a[i*3+2]=-1.7+z}pC.geometry.attributes.position.needsUpdate=true;
+ a=pB.geometry.attributes.position.array;for(let i=0;i<45;i++){const l=(ph*.9+i/45)%1;a[i*3]=1.5+l*.25+Math.sin(i*5)*.04;a[i*3+1]=SY+Math.cos(i*9.1)*.12+l*.1;a[i*3+2]=Math.sin(i*12.9)*.12}pB.geometry.attributes.position.needsUpdate=true;
+ if(goal){cam.position.lerp(goal.p,.08);ctl.target.lerp(goal.t,.08);if(cam.position.distanceTo(goal.p)<.02)goal=null}
+ ctl.update();renderer.render(scene,cam)}
+setFault('healthy');setMode('demo');animate();setInterval(()=>{S.ticks++;refresh()},500);
+</script></body></html>
